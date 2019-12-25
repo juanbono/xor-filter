@@ -11,7 +11,7 @@ impl Xor8 {
     /// The caller is responsible to ensure that there are no duplicate keys
     pub fn new(keys: Vec<u64>) -> Self {
         let size = keys.len();
-        let mut capacity = 32 + f64::ceil(1.23 * size as f64) as u32;
+        let mut capacity = 32 + (1.23 * size as f64).ceil() as u32;
         capacity = capacity / 3 * 3; // round it down to a multiple of 3
         let mut rngcounter = 1;
         let mut fingerprints = Vec::new();
