@@ -30,7 +30,7 @@ impl Xor8 {
         let mut q2: Vec<KeyIndex> = Vec::new();
         q2.resize(filter.block_length as usize, KeyIndex::new(0, 0));
         let mut stack: Vec<KeyIndex> = Vec::new();
-        stack.resize(size as usize, KeyIndex::new(0, 0));
+        stack.resize(size, KeyIndex::new(0, 0));
 
         let mut sets0: Vec<XorSet> = Vec::new();
         sets0.resize(filter.block_length as usize, XorSet::new(0, 0));
@@ -42,7 +42,7 @@ impl Xor8 {
         loop {
             for k in keys.iter() {
                 let key = *k;
-                let hs = filter.geth0h1h2(key);
+                let hs = filter.hashes(key);
                 sets0[hs.h0 as usize].xormask ^= hs.h; //
                 sets0[hs.h0 as usize].count += 1;
                 sets1[hs.h1 as usize].xormask ^= hs.h;
@@ -85,13 +85,13 @@ impl Xor8 {
                 while q0_size > 0 {
                     q0_size -= 1;
                     let keyindex_var = q0[q0_size];
-                    let index = keyindex_var.index;
-                    if sets0[index as usize].count == 0 {
+                    let index = keyindex_var.index as usize;
+                    if sets0[index].count == 0 {
                         continue; // not actually possible after the initial scan
                     }
                     let hash = keyindex_var.hash;
-                    let h1 = filter.geth1(hash);
-                    let h2 = filter.geth2(hash);
+                    let h1 = filter.h1(hash);
+                    let h2 = filter.h2(hash);
                     stack[stack_size] = keyindex_var;
                     stack_size += 1;
                     sets1[h1 as usize].xormask ^= hash;
@@ -115,15 +115,15 @@ impl Xor8 {
                 while q1_size > 0 {
                     q1_size -= 1;
                     let mut keyindex_var = q1[q1_size];
-                    let index = keyindex_var.index;
-                    if sets1[index as usize].count == 0 {
+                    let index = keyindex_var.index as usize;
+                    if sets1[index].count == 0 {
                         continue;
                     }
                     let hash = keyindex_var.hash;
-                    let h0 = filter.geth0(hash);
-                    let h2 = filter.geth2(hash);
+                    let h0 = filter.h0(hash);
+                    let h2 = filter.h2(hash);
                     keyindex_var.index = filter.block_length;
-                    stack[stack_size as usize] = keyindex_var;
+                    stack[stack_size] = keyindex_var;
                     stack_size += 1;
                     sets0[h0 as usize].xormask ^= hash;
                     sets0[h0 as usize].count -= 1;
@@ -144,16 +144,16 @@ impl Xor8 {
                 while q2_size > 0 {
                     q2_size -= 1;
                     let mut keyindex_var = q2[q2_size];
-                    let index = keyindex_var.index;
-                    if sets2[index as usize].count == 0 {
+                    let index = keyindex_var.index as usize;
+                    if sets2[index].count == 0 {
                         continue;
                     }
                     let hash = keyindex_var.hash;
-                    let h0 = filter.geth0(hash);
-                    let h1 = filter.geth1(hash);
+                    let h0 = filter.h0(hash);
+                    let h1 = filter.h1(hash);
                     keyindex_var.index += 2 * filter.block_length;
 
-                    stack[stack_size as usize] = keyindex_var;
+                    stack[stack_size] = keyindex_var;
                     stack_size += 1;
                     sets0[h0 as usize].xormask ^= hash;
                     sets0[h0 as usize].count -= 1;
@@ -189,16 +189,14 @@ impl Xor8 {
             let ki = stack[stack_size];
             let mut val = fingerprint(ki.hash) as u8;
             if ki.index < filter.block_length {
-                val ^= filter.fingerprints[(filter.geth1(ki.hash) + filter.block_length) as usize]
-                    ^ filter.fingerprints
-                        [(filter.geth2(ki.hash) + 2 * filter.block_length) as usize];
+                val ^= filter.fingerprints[(filter.h1(ki.hash) + filter.block_length) as usize]
+                    ^ filter.fingerprints[(filter.h2(ki.hash) + 2 * filter.block_length) as usize];
             } else if ki.index < 2 * filter.block_length {
-                val ^= filter.fingerprints[filter.geth0(ki.hash) as usize]
-                    ^ filter.fingerprints
-                        [(filter.geth2(ki.hash) + 2 * filter.block_length) as usize];
+                val ^= filter.fingerprints[filter.h0(ki.hash) as usize]
+                    ^ filter.fingerprints[(filter.h2(ki.hash) + 2 * filter.block_length) as usize];
             } else {
-                val ^= filter.fingerprints[filter.geth0(ki.hash) as usize]
-                    ^ filter.fingerprints[(filter.geth1(ki.hash) + filter.block_length) as usize];
+                val ^= filter.fingerprints[filter.h0(ki.hash) as usize]
+                    ^ filter.fingerprints[(filter.h1(ki.hash) + filter.block_length) as usize];
             }
             filter.fingerprints[ki.index as usize] = val;
         }
@@ -209,41 +207,29 @@ impl Xor8 {
     pub fn contains(&self, key: u64) -> bool {
         let hash = mixsplit(key, self.seed);
         let f = fingerprint(hash) as u8;
-        let r0 = hash as u32;
-        let r1 = rotl64(hash, 21) as u32;
-        let r2 = rotl64(hash, 42) as u32;
-        let h0 = reduce(r0, self.block_length) as u8;
-        let h1 = (reduce(r1, self.block_length) + self.block_length) as u8;
-        let h2 = (reduce(r2, self.block_length) + 2 * self.block_length) as u8;
+        let h0 = self.h0(hash) as u8;
+        let h1 = (self.h1(hash) + self.block_length) as u8;
+        let h2 = (self.h2(hash) + 2 * self.block_length) as u8;
         f == (self.fingerprints[h0 as usize]
             ^ self.fingerprints[h1 as usize]
             ^ self.fingerprints[h2 as usize])
     }
-    fn geth0h1h2(&self, k: u64) -> Hashes {
+    fn hashes(&self, k: u64) -> Hashes {
         let hash = mixsplit(k, self.seed);
-        let r0 = hash as u32;
-        let r1 = rotl64(hash, 21) as u32;
-        let r2 = rotl64(hash, 42) as u32;
-
-        Hashes::new(
-            hash,
-            reduce(r0, self.block_length),
-            reduce(r1, self.block_length),
-            reduce(r2, self.block_length),
-        )
+        Hashes::new(hash, self.h0(hash), self.h1(hash), self.h2(hash))
     }
 
-    fn geth0(&self, hash: u64) -> u32 {
+    fn h0(&self, hash: u64) -> u32 {
         let r0 = hash as u32;
         reduce(r0, self.block_length)
     }
 
-    fn geth1(&self, hash: u64) -> u32 {
+    fn h1(&self, hash: u64) -> u32 {
         let r1 = rotl64(hash, 21) as u32;
         reduce(r1, self.block_length)
     }
 
-    fn geth2(&self, hash: u64) -> u32 {
+    fn h2(&self, hash: u64) -> u32 {
         let r2 = rotl64(hash, 42) as u32;
         reduce(r2, self.block_length)
     }
