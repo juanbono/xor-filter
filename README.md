@@ -17,7 +17,7 @@ It provides 2 functions:
 use xor_filter::Xor8;
 
 fn main() {
-    let keys = vec![1, 2, 3]
+    let keys = vec![1, 2, 3];
     let filter = Xor8::new(keys);
 
     assert!(filter.contains(1));
