@@ -23,22 +23,17 @@ impl Xor8 {
             seed: splitmix64(&mut rngcounter),
         };
 
-        let mut q0: Vec<KeyIndex> = Vec::new();
-        q0.resize(filter.block_length as usize, Default::default());
-        let mut q1: Vec<KeyIndex> = Vec::new();
-        q1.resize(filter.block_length as usize, Default::default());
-        let mut q2: Vec<KeyIndex> = Vec::new();
-        q2.resize(filter.block_length as usize, Default::default());
-        let mut stack: Vec<KeyIndex> = Vec::new();
-        stack.resize(size, Default::default());
+        let block_length = filter.block_length as usize;
+        let mut q0: Vec<KeyIndex> = vec![Default::default(); block_length];
+        let mut q1: Vec<KeyIndex> = vec![Default::default(); block_length];
+        let mut q2: Vec<KeyIndex> = vec![Default::default(); block_length];
+        
+        let mut sets0: Vec<XorSet> = vec![Default::default(); block_length];
+        let mut sets1: Vec<XorSet> = vec![Default::default(); block_length];
+        let mut sets2: Vec<XorSet> = vec![Default::default(); block_length];
 
-        let mut sets0: Vec<XorSet> = Vec::new();
-        sets0.resize(filter.block_length as usize, Default::default());
-        let mut sets1: Vec<XorSet> = Vec::new();
-        sets1.resize(filter.block_length as usize, Default::default());
-        let mut sets2: Vec<XorSet> = Vec::new();
-        sets2.resize(filter.block_length as usize, Default::default());
-
+        let mut stack: Vec<KeyIndex> = vec![Default::default(); size];
+        
         loop {
             for k in keys.iter() {
                 let key = *k;
