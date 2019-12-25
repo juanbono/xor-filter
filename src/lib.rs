@@ -1,3 +1,6 @@
+mod util;
+use util::*;
+
 /// Xor8 offers a 0.3% false-positive probability
 #[derive(Debug, Clone)]
 pub struct Xor8 {
@@ -33,7 +36,7 @@ impl Xor8 {
         let mut sets2: Vec<XorSet> = vec![Default::default(); block_length];
 
         let mut stack: Vec<KeyIndex> = vec![Default::default(); size];
-        
+
         loop {
             for k in keys.iter() {
                 let key = *k;
@@ -252,40 +255,4 @@ impl Hashes {
     pub fn new(h: u64, h0: u32, h1: u32, h2: u32) -> Self {
         Hashes { h, h0, h1, h2 }
     }
-}
-
-fn murmur64(mut h: u64) -> u64 {
-    h ^= h >> 33;
-    h = h.wrapping_mul(0xff51_afd7_ed55_8ccd);
-    h ^= h >> 33;
-    h = h.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
-    h ^= h >> 33;
-    h
-}
-
-// returns random number, modifies the seed
-fn splitmix64(seed: &mut u64) -> u64 {
-    *seed = (*seed).wrapping_add(0x9e37_79b9_7f4a_7c15);
-    let mut z = *seed;
-    z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-    z ^ (z >> 31)
-}
-
-fn mixsplit(key: u64, seed: u64) -> u64 {
-    murmur64(key + seed)
-}
-
-fn rotl64(n: u64, c: i64) -> u64 {
-    (n << (c & 63)) | (n >> ((-c) & 63))
-}
-
-fn reduce(hash: u32, n: u32) -> u32 {
-    // http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
-    let h = hash as u64;
-    ((h.wrapping_mul(n as u64)) >> 32) as u32
-}
-
-fn fingerprint(hash: u64) -> u64 {
-    hash ^ (hash >> 32)
 }
