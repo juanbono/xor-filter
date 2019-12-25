@@ -24,20 +24,20 @@ impl Xor8 {
         };
 
         let mut q0: Vec<KeyIndex> = Vec::new();
-        q0.resize(filter.block_length as usize, KeyIndex::new(0, 0));
+        q0.resize(filter.block_length as usize, Default::default());
         let mut q1: Vec<KeyIndex> = Vec::new();
-        q1.resize(filter.block_length as usize, KeyIndex::new(0, 0));
+        q1.resize(filter.block_length as usize, Default::default());
         let mut q2: Vec<KeyIndex> = Vec::new();
-        q2.resize(filter.block_length as usize, KeyIndex::new(0, 0));
+        q2.resize(filter.block_length as usize, Default::default());
         let mut stack: Vec<KeyIndex> = Vec::new();
-        stack.resize(size, KeyIndex::new(0, 0));
+        stack.resize(size, Default::default());
 
         let mut sets0: Vec<XorSet> = Vec::new();
-        sets0.resize(filter.block_length as usize, XorSet::new(0, 0));
+        sets0.resize(filter.block_length as usize, Default::default());
         let mut sets1: Vec<XorSet> = Vec::new();
-        sets1.resize(filter.block_length as usize, XorSet::new(0, 0));
+        sets1.resize(filter.block_length as usize, Default::default());
         let mut sets2: Vec<XorSet> = Vec::new();
-        sets2.resize(filter.block_length as usize, XorSet::new(0, 0));
+        sets2.resize(filter.block_length as usize, Default::default());
 
         loop {
             for k in keys.iter() {
@@ -176,9 +176,9 @@ impl Xor8 {
                 break; // success
             }
 
-            sets0 = sets0.iter().map(|_| XorSet::new(0, 0)).collect();
-            sets1 = sets1.iter().map(|_| XorSet::new(0, 0)).collect();
-            sets2 = sets2.iter().map(|_| XorSet::new(0, 0)).collect();
+            sets0 = sets0.iter().map(|_| Default::default()).collect();
+            sets1 = sets1.iter().map(|_| Default::default()).collect();
+            sets2 = sets2.iter().map(|_| Default::default()).collect();
             filter.seed = splitmix64(&mut rngcounter);
         }
 
@@ -234,28 +234,16 @@ impl Xor8 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct XorSet {
     xormask: u64,
     count: u32,
 }
 
-impl XorSet {
-    pub fn new(xormask: u64, count: u32) -> Self {
-        XorSet { xormask, count }
-    }
-}
-
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 struct KeyIndex {
     hash: u64,
     index: u32,
-}
-
-impl KeyIndex {
-    pub fn new(hash: u64, index: u32) -> Self {
-        KeyIndex { hash, index }
-    }
 }
 
 struct Hashes {
