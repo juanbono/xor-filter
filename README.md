@@ -1,5 +1,7 @@
 # xor filter
 
+![badge](https://github.com/juanbono/xor-filter/workflows/xor_filter/badge.svg)
+
 A faster and smaller alternative to bloom filters and cuckoo filters[0].
 
 I ported it to Rust just as an excuse to learn about the algorithm, benchmarking and probabilistic data structures.
