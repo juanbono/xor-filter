@@ -30,7 +30,7 @@ impl Xor8 {
         let mut q0: Vec<KeyIndex> = vec![Default::default(); block_length];
         let mut q1: Vec<KeyIndex> = vec![Default::default(); block_length];
         let mut q2: Vec<KeyIndex> = vec![Default::default(); block_length];
-        
+
         let mut sets0: Vec<XorSet> = vec![Default::default(); block_length];
         let mut sets1: Vec<XorSet> = vec![Default::default(); block_length];
         let mut sets2: Vec<XorSet> = vec![Default::default(); block_length];
@@ -88,24 +88,23 @@ impl Xor8 {
                         continue; // not actually possible after the initial scan
                     }
                     let hash = keyindex_var.hash;
-                    let h1 = filter.h1(hash);
-                    let h2 = filter.h2(hash);
+                    let h1 = filter.h1(hash) as usize;
+                    let h2 = filter.h2(hash) as usize;
                     stack[stack_size] = keyindex_var;
                     stack_size += 1;
-                    sets1[h1 as usize].xormask ^= hash;
-
-                    sets1[h1 as usize].count -= 1;
-                    if sets1[h1 as usize].count == 1 {
-                        q1[q1_size].index = h1;
-                        q1[q1_size].hash = sets1[h1 as usize].xormask;
+                    sets1[h1].xormask ^= hash;
+                    sets1[h1].count -= 1;
+                    if sets1[h1].count == 1 {
+                        q1[q1_size].index = h1 as u32;
+                        q1[q1_size].hash = sets1[h1].xormask;
                         q1_size += 1;
                     }
 
-                    sets2[h2 as usize].xormask ^= hash;
-                    sets2[h2 as usize].count -= 1;
-                    if sets2[h2 as usize].count == 1 {
-                        q2[q2_size].index = h2;
-                        q2[q2_size].hash = sets2[h2 as usize].xormask;
+                    sets2[h2].xormask ^= hash;
+                    sets2[h2].count -= 1;
+                    if sets2[h2].count == 1 {
+                        q2[q2_size].index = h2 as u32;
+                        q2[q2_size].hash = sets2[h2].xormask;
                         q2_size += 1;
                     }
                 }
@@ -125,7 +124,7 @@ impl Xor8 {
                     stack_size += 1;
                     sets0[h0].xormask ^= hash;
                     sets0[h0].count -= 1;
-                    if sets0[h0 as usize].count == 1 {
+                    if sets0[h0].count == 1 {
                         q0[q0_size].index = h0 as u32;
                         q0[q0_size].hash = sets0[h0].xormask;
                         q0_size += 1;
@@ -174,9 +173,9 @@ impl Xor8 {
                 break; // success
             }
 
-            sets0 = sets0.iter().map(|_| Default::default()).collect();
-            sets1 = sets1.iter().map(|_| Default::default()).collect();
-            sets2 = sets2.iter().map(|_| Default::default()).collect();
+            sets0 = vec![Default::default(); sets0.len()];
+            sets1 = vec![Default::default(); sets1.len()];
+            sets2 = vec![Default::default(); sets2.len()];
             filter.seed = splitmix64(&mut rngcounter);
         }
 
@@ -186,17 +185,20 @@ impl Xor8 {
             stack_size -= 1;
             let ki = stack[stack_size];
             let mut val = fingerprint(ki.hash) as u8;
-            if ki.index < filter.block_length {
-                val ^= filter.fingerprints[(filter.h1(ki.hash) + filter.block_length) as usize]
-                    ^ filter.fingerprints[(filter.h2(ki.hash) + 2 * filter.block_length) as usize];
-            } else if ki.index < 2 * filter.block_length {
-                val ^= filter.fingerprints[filter.h0(ki.hash) as usize]
-                    ^ filter.fingerprints[(filter.h2(ki.hash) + 2 * filter.block_length) as usize];
+            let (length, ki_index) = (filter.block_length as usize, ki.index as usize);
+            let (h0, h1, h2) = (
+                filter.h0(ki.hash) as usize,
+                filter.h1(ki.hash) as usize,
+                filter.h2(ki.hash) as usize,
+            );
+            if ki_index < length {
+                val ^= filter.fingerprints[h1 + length] ^ filter.fingerprints[h2 + 2 * length];
+            } else if ki_index < 2 * length {
+                val ^= filter.fingerprints[h0] ^ filter.fingerprints[h2 + 2 * length];
             } else {
-                val ^= filter.fingerprints[filter.h0(ki.hash) as usize]
-                    ^ filter.fingerprints[(filter.h1(ki.hash) + filter.block_length) as usize];
+                val ^= filter.fingerprints[h0] ^ filter.fingerprints[h1 + length];
             }
-            filter.fingerprints[ki.index as usize] = val;
+            filter.fingerprints[ki_index] = val;
         }
         filter
     }
